@@ -2,6 +2,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 import xlsxwriter
 
+"""
+
+    Класс предназначен для сохранения результатов.
+
+    Форматы:
+    Пеленг - .x градусов
+    Дистанция - .xxx м
+    Курс - .x градусов
+    Скорость - .xx м / с
+
+    save_results() предназначен для сохранения результатов метода tma.swarm()
+"""
 class Tests():
     def __init__(self, name):
         self.test_name = name
