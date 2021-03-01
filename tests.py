@@ -40,9 +40,10 @@ class Tests():
             R.append(r['Истинные параметры'])
             R.append(r['Полученные параметры'])
             R.append(r['Начальное приближение'])
-            R.append(r['Оценка'])
-            R.append(r['Число вычислений функции'])
             R.append(r['Среднеквадратичное отклонение параметров'])
+            R.append(r['Оценка'])
+            R.append(r['Время работы'])
+            R.append(r['Число вычислений функции'])
             R = [i for j in R for i in j]
             res[i] = R
         with xlsxwriter.Workbook('results.xlsx') as workbook:

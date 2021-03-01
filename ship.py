@@ -49,13 +49,14 @@ class Ship():
         elif mode == 'xy':
             self.x_origin, self.y_origin, self.x_velocity, self.y_velocity = args
 
+        # fix true_params when xy
         self.true_params = list(args[:4])
         self.name = name
         self.position = np.array((self.x_origin, self.y_origin))
         self.velocity = np.array((self.x_velocity, self.y_velocity))
         self.coords = [[self.x_origin], [self.y_origin]]
         self.vels = [[self.x_velocity], [self.y_velocity]]
-
+        
     def plot_trajectory(self):
         plt.plot(self.coords[0], self.coords[1])
         plt.axis('square')
@@ -91,7 +92,7 @@ class Ship():
     def forward_movement(self, time):
         for i in range(time):
             self.update_position()
-        print('Корабль-{} движется прямо по курсу {:.1f}° {}с'.format(self.name,
+        print('{} движется прямо по курсу {:.1f}° {}с'.format(self.name,
                                                                       np.degrees(self.get_course()), time))
 
     def update_position(self):
@@ -127,5 +128,5 @@ class Ship():
             time += 1
             self.update_velocity(teta)
             self.update_position()
-        print('Корабль-{} перешёл на курс {:.1f}° за {}с'.format(self.name,
+        print('{} перешёл на курс {:.1f}° за {}с'.format(self.name,
                                                                  np.degrees(self.get_course()), time))
