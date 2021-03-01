@@ -49,13 +49,14 @@ class Ship():
         elif mode == 'xy':
             self.x_origin, self.y_origin, self.x_velocity, self.y_velocity = args
 
+        # fix true_params when xy
         self.true_params = list(args[:4])
         self.name = name
         self.position = np.array((self.x_origin, self.y_origin))
         self.velocity = np.array((self.x_velocity, self.y_velocity))
         self.coords = [[self.x_origin], [self.y_origin]]
         self.vels = [[self.x_velocity], [self.y_velocity]]
-
+        
     def plot_trajectory(self):
         plt.plot(self.coords[0], self.coords[1])
         plt.axis('square')
