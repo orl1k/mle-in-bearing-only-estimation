@@ -1,7 +1,6 @@
 import numpy as np
 from scipy.linalg import cho_factor, cho_solve
 from ship import Ship
-import numdifftools as nd
 
 
 def lm(f, x_data, y_data, par, sigma=None, verbose=False, jac=None):
@@ -9,10 +8,9 @@ def lm(f, x_data, y_data, par, sigma=None, verbose=False, jac=None):
     lam = 1e-2
     down_factor = 0.5
     up_factor = 3
-    ftol = 1e-10
-    i = 0
-    nfev = 1
-    # var_tol = (np.radians(1) ** 2) * (len(y_data) - len(par))
+    ftol = 1e-10  # Допуск для дельта err
+    i = 0  # Число итераций
+    nf = 1  # Число вычислений функции
 
     f_par = f(x_data, par)
     err = err_func(x_data, y_data, par, f_par, sigma)
@@ -22,7 +20,7 @@ def lm(f, x_data, y_data, par, sigma=None, verbose=False, jac=None):
             J = jac(x_data, par)
         else:
             J = numeric_jac(f, x_data, par, f_par)
-            nfev += 4
+            nf += 4
 
         if sigma is None:
             b = J.T.dot(y_data - f_par)
@@ -45,7 +43,7 @@ def lm(f, x_data, y_data, par, sigma=None, verbose=False, jac=None):
 
                 new_par = par + delta_par
                 f_par = f(x_data, new_par)
-                nfev += 1
+                nf += 1
                 new_err = err_func(x_data, y_data, new_par, f_par, sigma)
                 delta_err = err - new_err
                 step = delta_err >= 0.
@@ -73,9 +71,10 @@ def lm(f, x_data, y_data, par, sigma=None, verbose=False, jac=None):
         J = jac(x_data, par)
     else:
         J = numeric_jac(f, x_data, par, f_par)
+
     H = J.T.dot(J)
 
-    return par, np.linalg.inv(H) * err / (len(y_data) - len(par)), [nfev, i]
+    return par, np.linalg.inv(H) * err / (len(y_data) - len(par)), [nf, i]
 
 
 def err_func(x_data, y_data, par, f_par, sigma):

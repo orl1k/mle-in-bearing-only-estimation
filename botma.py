@@ -8,20 +8,19 @@ import time
 
 class TMA(Ship):
     def __init__(self, observer, target, mean=0, sd=np.radians(0.1), seed=None):
-        self.seed = seed
-        np.random.seed(self.seed)
+        np.random.seed(seed)
         self.mean = mean
         self.standart_deviation = sd
         self.observer = observer
         self.target = target
-        self.observer_coords = np.array(self.observer.coords.copy())
+        self.observer_coords = np.array(self.observer.coords)
         self._set_bearings_and_distances()
         self.set_noise()
         self.true_params = self.target.get_params()
-        self.true_params[0] = self.transform_to_angle(
-            np.radians(self.true_params[0]))
-        self.true_params[2] = self.transform_to_angle(
-            np.radians(self.true_params[2]))
+        # self.true_params[0] = self.transform_to_angle(
+        #     np.radians(self.true_params[0]))
+        # self.true_params[2] = self.transform_to_angle(
+        #     np.radians(self.true_params[2]))
 
     @staticmethod
     def _b_func(data, params):
@@ -137,27 +136,32 @@ class TMA(Ship):
                 except(IndexError):
                     bearing_array.append(bearing)
                     print(
-                        'Корабли находятся слишком близко друг к другу в начальный момент времени')
+                        'Объекты находятся слишком близко друг к другу в начальный момент времени')
             else:
                 bearing_array.append(bearing)
         self.bearings = np.array(bearing_array)
         self.distance_array = np.array(distance_array) / 1000
 
-    def set_target(self, *args):
-        if len(args[0]) != 4:
-            target_bearing = 0
-            target_distance = np.random.uniform(0, 45)
-            target_course = np.random.uniform(0, 180)
-            target_velocity = np.random.uniform(5, 15)
+    def set_target(self, p0 = None, seed = None):
+        if p0 is None:
+            np.random.seed(seed)
+            b = 0
+            d = np.random.uniform(5, 50)
+            c = np.random.uniform(0, 180)
+            v = np.random.uniform(5, 15)
+
         else:
-            target_bearing, target_distance, target_course, target_velocity = args[0]
-        self.target = Ship('объект', target_bearing, target_distance, target_course,
-                           target_velocity, self.observer, mode='bdcv')  # создаем корабль-объект
+            b, d, c, v = p0
+        self.target = Ship('Объект', b, d, c,
+                           v, self.observer, mode='bdcv')  # создаем корабль-объект
         self.target.forward_movement(len(self.observer_coords[0]) - 1)
         self._set_bearings_and_distances()
-        self.set_noise()
+        self.true_params = self.target.get_params()
+        self.set_noise(seed = seed)
 
-    def set_noise(self):
+    def set_noise(self, seed = None):
+        if seed is not None:
+            np.random.seed(seed)
         self.bearings_with_noise = self.bearings.copy()
         noise = np.random.normal(
             self.mean, self.standart_deviation, len(self.bearings))
@@ -173,7 +177,6 @@ class TMA(Ship):
         bearing, distance = Ship.convert_to_polar(res[0][0], res[0][1])
         course, velocity = Ship.convert_to_polar(res[0][2], res[0][3])
         r = [bearing, distance, course, velocity]
-        self.last_result = r.copy()
         score = res[2]['nfev']
         perr = np.sqrt(np.diag(res[1]))
         return self.get_result(algorithm_name, r, perr, score, p0, stop_time - start_time)
@@ -186,7 +189,6 @@ class TMA(Ship):
                         self.bearings_with_noise, p0=p0, full_output=True)
         stop_time = time.perf_counter()
         score = res[2]['nfev']
-        self.last_result = res[0].copy()
         score = res[2]['nfev']
         perr = np.sqrt(np.diag(res[1]))
         return self.get_result(algorithm_name, res[0], perr, score, p0, stop_time - start_time)
@@ -197,7 +199,6 @@ class TMA(Ship):
         res = curve_fit(self._normalized_b_func, self.observer_coords,
                         self.bearings_with_noise - self.mu, p0=p0, full_output=True, maxfev=10000)
         score = res[2]['nfev']
-        self.last_result = res[0].copy()
         perr = np.sqrt(np.diag(res[1]))
         return self.get_result(algorithm_name, res[0], perr, score, p0)
 
@@ -208,8 +209,6 @@ class TMA(Ship):
         res = lm.lm(self._b_func, self.observer_coords,
                     self.bearings_with_noise, p0, verbose=False, jac=self._b_func_jac)
         stop_time = time.perf_counter()
-        self.last_result = res[0].copy()
-        self.last_cov = res[1].copy()
         perr = np.sqrt(np.diag(res[1]))
         return self.get_result(algorithm_name, res[0].copy(), perr, res[2], p0, stop_time - start_time)
 
@@ -220,12 +219,8 @@ class TMA(Ship):
         res = lm.lm(self._xy_func, self.observer_coords,
                     self.bearings_with_noise, p0, verbose=False, jac=self._xy_func_jac)
         stop_time = time.perf_counter()
-        bearing, distance = Ship.convert_to_polar(res[0][0], res[0][1])
-        course, velocity = Ship.convert_to_polar(res[0][2], res[0][3])
-        r = [bearing, distance, course, velocity]
-        self.last_result = r.copy()
         perr = np.sqrt(np.diag(res[1]))
-        return self.get_result(algorithm_name, r.copy(), perr, res[2], p0, stop_time - start_time)
+        return self.get_result(algorithm_name, res[0].copy(), perr, res[2], p0, stop_time - start_time)
 
     def n_bearings_algorithm(self):
         algorithm_name = 'Метод N пеленгов'
@@ -253,7 +248,7 @@ class TMA(Ship):
         res[2], res[3] = Ship.convert_to_polar(res[2], res[3])
         self.last_result = res.copy()
 
-        stop_time = start_time = time.perf_counter()
+        stop_time = time.perf_counter()
         return self.get_result(algorithm_name, res.copy(), [0, 0, 0, 0], [0], [0, 0, 0, 0], stop_time - start_time)
 
     def plot_trajectories(self):
@@ -345,30 +340,30 @@ class TMA(Ship):
     def swarm(self, n):
         res_arr = []
         for i in range(n):
-            # self.set_target([b0, d0, c0, v0])
             # p0 = [np.pi / 2, 10.0, np.pi / 4, 10.0]
-            np.random.seed(i)
-            p0 = self._random_p0()
+            self.set_target(seed = i)
+            p0 = self.get_random_p0(seed = i + 1000)
             [b, d, c, v] = p0
-            p0 = [d*np.cos(b), d*np.sin(b), v*np.cos(c), v*np.sin(c)]
+            p0 = [d * np.cos(b), d * np.sin(b), v * np.cos(c), v * np.sin(c)]
             try:
                 # result = self.n_bearings_algorithm()
                 # result = self.mle_algorithm_v2(p0)
                 result = self.mle_algorithm_v5(p0)
                 res_arr.append(result)
-                self.set_noise()
             except(RuntimeError):
                 print('Runtime error')
         return res_arr
 
-    def _random_p0(self):
-        b0 = 0
-        d0 = np.random.uniform(5, 50)
-        c0 = np.random.uniform(0, 180)
-        v0 = np.random.uniform(5, 15)
-        b0 = Ship.transform_to_angle(np.radians(b0))
-        c0 = Ship.transform_to_angle(np.radians(c0))
-        return [b0, d0, c0, v0]
+    def get_random_p0(self, seed = None):
+        if seed is not None:
+            np.random.seed(seed)
+        b = 0
+        d = np.random.uniform(5, 50)
+        c = np.random.uniform(0, 180)
+        v = np.random.uniform(5, 15)
+        b = Ship.transform_to_angle(np.radians(b))
+        c = Ship.transform_to_angle(np.radians(c))
+        return [b, d, c, v]
 
     def linear(self):
         self.mu = np.mean(self.bearings_with_noise)
@@ -376,37 +371,31 @@ class TMA(Ship):
         plt.plot(np.tan(self.shifted_bearings_with_noise))
         plt.show()
 
-    def get_result(self, algorithm_name, params, perr, nfev, p0, t):
+    def get_result(self, algorithm_name, res, perr, nfev, p0, t):
 
         # f = self.b_func(self.observer_coords, params)
         # bwn = self.bearings_with_noise
         # ss_res = sum((np.array(f) - bwn)**2)
         # ss_tol = sum((bwn - np.mean(bwn))**2)
         # R2 = 1 - ss_res / ss_tol
-
-        params[0] %= 2 * np.pi
-        params[2] %= 2 * np.pi
-
-        if params[3] < 0:
-            params[3] = -params[3]
-            params[2] = params[2] - np.pi
-
-        if params[1] < 0:
-            params[1] = -params[1]
-            params[0] = params[0] - np.pi
-
-        arr = np.degrees(self.bearings_with_noise -
-                         self._b_func(self.observer_coords, params))
-        k_a = np.dot(arr, arr.T) / len(arr)
-
-        true_params = self.target.get_params().copy()
-        true_params[0] = np.degrees(Ship.transform_to_bearing(true_params[0]))
-        true_params[2] = np.degrees(Ship.transform_to_bearing(true_params[2]))
-
-        params[0] = np.degrees(Ship.transform_to_bearing(params[0]))
-        params[2] = np.degrees(Ship.transform_to_bearing(params[2]))
-
+        
         if algorithm_name in ['ММП v4', 'ММП v2']:
+            r = np.degrees(self.bearings_with_noise -
+                         self._b_func(self.observer_coords, res)) # residuals
+
+            res[0] %= 2 * np.pi
+            res[2] %= 2 * np.pi
+
+            if res[3] < 0:
+                res[3] = -res[3]
+                res[2] = res[2] - np.pi
+
+            if res[1] < 0:
+                res[1] = -res[1]
+                res[0] = res[0] - np.pi
+
+            res[0] = np.degrees(Ship.transform_to_bearing(res[0]))
+            res[2] = np.degrees(Ship.transform_to_bearing(res[2]))
 
             p0[0] = np.degrees(Ship.transform_to_bearing(p0[0]))
             p0[2] = np.degrees(Ship.transform_to_bearing(p0[2]))
@@ -414,19 +403,29 @@ class TMA(Ship):
             perr[0] = np.degrees(perr[0])
             perr[2] = np.degrees(perr[2])
 
-        temp = true_params - np.array(params)
+        else:
+            r = np.degrees(self.bearings_with_noise -
+                         self._xy_func(self.observer_coords, res)) # residuals
+            res = Ship.convert_to_bdcv(res)
+            # perr = Ship.convert_to_bdcv(perr)
+            p0 = Ship.convert_to_bdcv(p0)
+            
+        self.last_result = res
+        k_a = np.sum(r ** 2) / len(r)
+
+        temp = self.true_params - np.array(res)
         temp[0] = (temp[0] + 180) % 360 - 180
         temp[2] = (temp[2] + 180) % 360 - 180
 
-        d = np.array([1 / 1, 1 / (true_params[1] * 0.15),
-                      1 / 10, 1 / (true_params[3] * 0.1)])
+        d = np.array([1 / 1, 1 / (self.true_params[1] * 0.15),
+                      1 / 10, 1 / (self.true_params[3] * 0.1)])
         temp = abs(temp) * d
         k_b = np.sum(temp) / 4
 
         k_c = int(all(temp < [1, 1, 1, 1]))
 
-        result = {algorithm_name: {'Истинные параметры': true_params,
-                                   'Полученные параметры': list(params),
+        result = {algorithm_name: {'Истинные параметры': self.true_params,
+                                   'Полученные параметры': list(res),
                                    'Начальное приближение': p0,
                                    'Оценка': [k_a, k_b, k_c],
                                    'Число вычислений функции': nfev,

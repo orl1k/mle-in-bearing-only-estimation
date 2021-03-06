@@ -5,34 +5,44 @@ import matplotlib.pyplot as plt
 class Ship():
 
     @staticmethod
-    def transform_to_bearing(angle):
-        """ угол -> пеленг в радианах """
-        angle = (np.pi / 2) - ((2 * np.pi + angle) *
-                               (angle < 0) + angle * (angle >= 0))
-        return angle if angle >= 0 else angle + 2 * np.pi
+    def transform_to_bearing(a):
+        """ угол в радианах -> пеленг в радианах """
+        a = (np.pi / 2) - ((2 * np.pi + a) *
+                               (a < 0) + a * (a >= 0))
+        return a if a >= 0 else a + 2 * np.pi
 
     @staticmethod
-    def transform_to_angle(bearing):
-        """ пеленг -> угол в радианах """
-        angle = (np.pi / 2) - bearing
+    def transform_to_angle(b):
+        """ пеленг в радианах -> угол в радианах """
+        angle = (np.pi / 2) - b
         return angle if abs(angle) <= np.pi else (2 * np.pi) + angle
 
     @staticmethod
-    def convert_to_polar(x, y):
+    def convert_to_polar(coords):
+        x, y = coords
         distance = (x**2 + y**2)**(0.5)
         angle = np.arctan2(y, x)
         return [angle, distance]
 
     @staticmethod
+    def convert_to_bdcv(params):
+        x, y, vx, vy = params
+        b, d = Ship.convert_to_polar([x, y])
+        c, v = Ship.convert_to_polar([vx, vy])
+        b = np.degrees(Ship.transform_to_bearing(b))
+        c = np.degrees(Ship.transform_to_bearing(c))
+        return [b, d, c, v]
+
+    @staticmethod
     def convert_to_xy(params):
-        bearing, distance, course, velocity = params
-        bearing = Ship.transform_to_angle(np.radians(bearing))
-        x_coord = 1000 * distance * np.cos(bearing)
-        y_coord = 1000 * distance * np.sin(bearing)
-        course = Ship.transform_to_angle(np.radians(course))
-        x_velocity = velocity * np.cos(course)
-        y_velocity = velocity * np.sin(course)
-        return [x_coord, y_coord, x_velocity, y_velocity]
+        b, d, c, v = params
+        b = Ship.transform_to_angle(np.radians(b))
+        x = 1000 * d * np.cos(b)
+        y = 1000 * d * np.sin(b)
+        c = Ship.transform_to_angle(np.radians(c))
+        vx = v * np.cos(c)
+        vy = v * np.sin(c)
+        return [x, y, vx, vy]
 
     def __init__(self, name, *args, mode='xycv'):
 
@@ -88,7 +98,7 @@ class Ship():
         return self.transform_to_bearing(angle)
 
     def get_params(self):
-        return self.true_params
+        return self.true_params.copy()
 
     def forward_movement(self, time):
         for i in range(time):
