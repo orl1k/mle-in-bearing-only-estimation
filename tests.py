@@ -14,6 +14,8 @@ import xlsxwriter
 
     save_results() предназначен для сохранения результатов метода tma.swarm()
 """
+
+
 class Tests():
     def __init__(self, name):
         self.test_name = name

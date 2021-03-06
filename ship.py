@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 class Ship():
 
     @staticmethod
@@ -56,7 +57,7 @@ class Ship():
         self.velocity = np.array((self.x_velocity, self.y_velocity))
         self.coords = [[self.x_origin], [self.y_origin]]
         self.vels = [[self.x_velocity], [self.y_velocity]]
-        
+
     def plot_trajectory(self):
         plt.plot(self.coords[0], self.coords[1])
         plt.axis('square')
@@ -93,7 +94,7 @@ class Ship():
         for i in range(time):
             self.update_position()
         print('{} движется прямо по курсу {:.1f}° {}с'.format(self.name,
-                                                                      np.degrees(self.get_course()), time))
+                                                              np.degrees(self.get_course()), time))
 
     def update_position(self):
         self.position = self.position + self.velocity
@@ -129,4 +130,4 @@ class Ship():
             self.update_velocity(teta)
             self.update_position()
         print('{} перешёл на курс {:.1f}° за {}с'.format(self.name,
-                                                                 np.degrees(self.get_course()), time))
+                                                         np.degrees(self.get_course()), time))

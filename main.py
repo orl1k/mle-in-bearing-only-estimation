@@ -19,11 +19,12 @@ target_bearing, target_distance, target_course, target_velocity = 0, 20, 45, 10
 target = Ship('Объект', target_bearing, target_distance, target_course,
               target_velocity, observer, mode='bdcv')
 # Моделирование траекторий
+
 observer.forward_movement(3 * 60)
 observer.change_course(270, 'left', omega=0.5)
-observer.forward_movement(5 * 60)
+observer.forward_movement(2 * 60)
 observer.change_course(90, 'right', omega=0.5)
-observer.forward_movement(120)
+observer.forward_movement(5 * 60)
 
 # Время движения объекта должно совпадать с временем наблюдателя для TMA
 target.forward_movement(len(observer.coords[0])-1)
@@ -33,14 +34,15 @@ target.forward_movement(len(observer.coords[0])-1)
 # target.change_course(270, 'left', omega=0.5)
 # target.forward_movement(360)
 
-tma = TMA(observer, target, sd = np.radians(0.3))
+tma = TMA(observer, target, sd=np.radians(1), seed=1)
 
-print(tma.mle_algorithm_v4([1, 1, 1, 1]))
+# z = np.append(tma.observer_coords, np.arange(0, len(observer.coords[0])))
+# z=z.reshape(3, len(observer.coords[0]))
 
-# tma.n_bearings_algorithm(tma.bearings_with_noise[0])
+# print(tma.mle_algorithm_v5([1, 1, 1, 1]))
 
-# r = tma.swarm(100)
-# tests.save_results(r)
+r = tma.swarm(100)
+tests.save_results(r)
 
 # # Запуск множества моделей
 # r = tma.swarm(100)
