@@ -1,17 +1,42 @@
 import numpy as np
 from scipy.linalg import cho_factor, cho_solve
+
 from project.ship import Ship
 
 
-def lev_mar(f, x_data, y_data, par, std=None, sigma=None, verbose=False, jac=None, lam=1e-2, down_factor=0.5, up_factor=3, max_it=100, ftol=1e-8):
+def lev_mar(
+    f,
+    x_data,
+    y_data,
+    par,
+    std=None,
+    sigma=None,
+    verbose=False,
+    jac=None,
+    lam=1e-2,
+    down_factor=0.5,
+    up_factor=3,
+    max_it=100,
+    ftol=1e-8,
+):
     i = 0  # Число итераций
     nf = 1  # Число вычислений функции
     status = -1
 
-    if (verbose):
-        statuses = {0: ['Разность ошибок суммы квадратов невязок меньше ftol = {:.0e}'.format(ftol)],
-                    1: ['Число итераций превысило свой лимит max_it = %i' %max_it]}
-        print('lambda = {}, lambda_up = {}, lambda_down = {}'.format(lam, up_factor, down_factor))
+    if verbose:
+        statuses = {
+            0: [
+                "Разность ошибок суммы квадратов невязок меньше ftol = {:.0e}".format(
+                    ftol
+                )
+            ],
+            1: ["Число итераций превысило свой лимит max_it = %i" % max_it],
+        }
+        print(
+            "lambda = {}, lambda_up = {}, lambda_down = {}".format(
+                lam, up_factor, down_factor
+            )
+        )
 
     f_par = f(x_data, par)
     err = err_func(x_data, y_data, par, f_par, sigma)
@@ -39,9 +64,16 @@ def lev_mar(f, x_data, y_data, par, std=None, sigma=None, verbose=False, jac=Non
                 A = H + lam * np.diag(np.diag(H))  # Fletcher modification
                 # A = H + lam * np.eye(len(par)) # Standart LM
 
-                if (verbose):
-                    print('it = {},   lambda = {:.2e}, err = {:.4f}, par = {}, std = {}'.format(
-                    i, lam, err, _format_par(par), np.degrees(np.sqrt(err / len(y_data)))))
+                if verbose:
+                    print(
+                        "it = {},   lambda = {:.2e}, err = {:.4f}, par = {}, std = {}".format(
+                            i,
+                            lam,
+                            err,
+                            _format_par(par),
+                            np.degrees(np.sqrt(err / len(y_data))),
+                        )
+                    )
 
                 L, low = cho_factor(A)
                 delta_par = cho_solve((L, low), b)
@@ -51,12 +83,12 @@ def lev_mar(f, x_data, y_data, par, std=None, sigma=None, verbose=False, jac=Non
                 nf += 1
                 new_err = err_func(x_data, y_data, new_par, f_par, sigma)
                 delta_err = err - new_err
-                step = delta_err >= 0.
+                step = delta_err >= 0.0
 
                 if not step:
                     lam *= up_factor
 
-            except(np.linalg.LinAlgError):
+            except (np.linalg.LinAlgError):
                 lam *= up_factor
 
         par = new_par
@@ -71,21 +103,25 @@ def lev_mar(f, x_data, y_data, par, std=None, sigma=None, verbose=False, jac=Non
 
     if status == -1:
         status = 1
-    
+
     if jac is not None:
         J = jac(x_data, par)
     else:
         J = numeric_jac(f, x_data, par, f_par)
 
-    if (verbose):
-            print('it = {},   lambda = {:.2e}, err = {:.4f}, par = {}, std = {}'.format(
-            i, lam, err, _format_par(par), np.degrees(np.sqrt(err / len(y_data)))))
-            print(statuses[status][0])
+    if verbose:
+        print(
+            "it = {},   lambda = {:.2e}, err = {:.4f}, par = {}, std = {}".format(
+                i, lam, err, _format_par(par), np.degrees(np.sqrt(err / len(y_data)))
+            )
+        )
+        print(statuses[status][0])
     H = J.T.dot(J)
     if std is None:
         return par, np.linalg.inv(H) * err / (len(y_data) - len(par)), [nf, i]
     else:
         return par, np.linalg.inv(H) * (std ** 2), [nf, i]
+
 
 def err_func(x_data, y_data, par, f_par, sigma):
     res = f_par - y_data
