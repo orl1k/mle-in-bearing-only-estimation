@@ -1,16 +1,17 @@
 import numpy as np
 from scipy.linalg import cho_factor, cho_solve
-from ship import Ship
+from project.ship import Ship
 
 
-def lm(f, x_data, y_data, par, sigma=None, verbose=False, jac=None):
-    max_it = 100
-    lam = 1e-2
-    down_factor = 0.5
-    up_factor = 3
-    ftol = 1e-10  # Допуск для дельта err
+def lm(f, x_data, y_data, par, std=None, sigma=None, verbose=False, jac=None, lam=1e-2, down_factor=0.5, up_factor=3, max_it=100, ftol=1e-8):
     i = 0  # Число итераций
     nf = 1  # Число вычислений функции
+    status = -1
+
+    if (verbose):
+        statuses = {0: ['Разность ошибок суммы квадратов невязок меньше ftol = {:.0e}'.format(ftol)],
+                    1: ['Число итераций превысило свой лимит max_it = %i' %max_it]}
+        print('lambda = {}, lambda_up = {}, lambda_down = {}'.format(lam, up_factor, down_factor))
 
     f_par = f(x_data, par)
     err = err_func(x_data, y_data, par, f_par, sigma)
@@ -38,6 +39,14 @@ def lm(f, x_data, y_data, par, sigma=None, verbose=False, jac=None):
                 A = H + lam * np.diag(np.diag(H))  # Fletcher modification
                 # A = H + lam * np.eye(len(par)) # Standart LM
 
+                if (verbose):
+                    print('it = {},   lambda = {:.2e}, err = {:.4f}, par = {}, std = {}'.format(
+                    i, lam, err, _format_par(par), np.degrees(np.sqrt(err / len(y_data)))))
+                    # print('hessian = ')
+                    # print(H)
+                    # print('hessian + lambda*diag(hessian) = ')
+                    # print(A)
+
                 L, low = cho_factor(A)
                 delta_par = cho_solve((L, low), b)
 
@@ -58,24 +67,29 @@ def lm(f, x_data, y_data, par, sigma=None, verbose=False, jac=None):
         err = new_err
         i += 1
 
-        if (verbose):
-            print('it = {},   lambda = {:.2e}, err = {:.4f}, par = {}, se = {}'.format(
-                i, lam, err, _format_par(par), np.degrees(np.sqrt(err / len(y_data)))))
-
         lam *= down_factor
 
         if delta_err < ftol:
+            status = 0
             break
 
+    if status == -1:
+        status = 1
+    
     if jac is not None:
         J = jac(x_data, par)
     else:
         J = numeric_jac(f, x_data, par, f_par)
 
+    if (verbose):
+            print('it = {},   lambda = {:.2e}, err = {:.4f}, par = {}, std = {}'.format(
+            i, lam, err, _format_par(par), np.degrees(np.sqrt(err / len(y_data)))))
+            print(statuses[status][0])
     H = J.T.dot(J)
-
-    return par, np.linalg.inv(H) * err / (len(y_data) - len(par)), [nf, i]
-
+    if std is None:
+        return par, np.linalg.inv(H) * err / (len(y_data) - len(par)), [nf, i]
+    else:
+        return par, np.linalg.inv(H / (std ** 2)), [nf, i]
 
 def err_func(x_data, y_data, par, f_par, sigma):
     res = f_par - y_data
@@ -99,9 +113,5 @@ def numeric_jac(f, x_data, par, f_par):
 
 
 def _format_par(par):
-    res = []
-    res.append(np.degrees(Ship.transform_to_bearing(par[0])))
-    res.append(par[1])
-    res.append(np.degrees(Ship.transform_to_bearing(par[2])))
-    res.append(par[3])
+    res = Ship.convert_to_bdcv(par)
     return res

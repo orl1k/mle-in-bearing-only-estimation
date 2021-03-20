@@ -1,9 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import xlsxwriter
+import pandas as pd
 
 """
-
     Класс предназначен для сохранения результатов.
 
     Форматы:
@@ -33,26 +33,20 @@ class Tests():
                        1000, fmt='%.3f', newline=' ')
             f.write(b"\n")
 
-    def save_results(self, res):
+    def get_df(self, res):
         algorithm_name = list(res[0].keys())[0]
+        df = pd.DataFrame(columns=['П0_ист','Д0_ист','К0_ист','V0_ист','П0_расч',\
+            'Д0_расч', 'К0_расч','V0_расч','П0_апр','Д0_апр','К0_апр',\
+            'V0_апр','СКО X','СКО Y','СКО VX','СКО VY','Ка','Кб','Точ','t','Nf','Iter'])
         for i, r in enumerate(res):
-            R = []
             r = r[algorithm_name]
-            del r['Данные']
-            R.append(r['Истинные параметры'])
-            R.append(r['Полученные параметры'])
-            R.append(r['Начальное приближение'])
-            R.append(r['Среднеквадратичное отклонение параметров'])
-            R.append(r['Оценка'])
-            R.append(r['Время работы'])
-            R.append(r['Число вычислений функции'])
-            R = [i for j in R for i in j]
-            res[i] = R
-        with xlsxwriter.Workbook('results.xlsx') as workbook:
-            worksheet = workbook.add_worksheet()
-            for row_num, data in enumerate(res):
-                worksheet.write_row(row_num, 0, data)
+            flat_list = [item for sublist in r.values() for item in sublist]
+            df.loc[i] = flat_list
+        return df
 
+    def save_df(self, df):
+        df.to_excel('results.xlsx', index=False)
+        
     def save_bearings_fig(self, true_distances, pred_distances):
         plt.plot(true_distances, linewidth=5.0)
         plt.plot(2)

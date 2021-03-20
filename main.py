@@ -1,23 +1,21 @@
 import numpy as np
-from ship import Ship
-from tests import Tests
-from botma import TMA
-import lm
-import time
+from project.ship import Ship
+from project.tests import Tests
+from project.botma import TMA
 
 # Класс для сохранения результатов
-tests = Tests('1')
+tests = Tests('2')
 
 # Пример моделирования
 
 # Создаем наблюдатель
 observer_x, observer_y, observer_course, observer_velocity = 0, 0, 0, 3
 observer = Ship('Наблюдатель', observer_x, observer_y, observer_course,
-                observer_velocity)
+                observer_velocity, verbose=True)
 # Создаем объект
 target_bearing, target_distance, target_course, target_velocity = 0, 20, 45, 10
 target = Ship('Объект', target_bearing, target_distance, target_course,
-              target_velocity, observer, mode='bdcv')
+              target_velocity, observer, mode='bdcv', verbose=True)
 
 # Моделирование траекторий
 observer.forward_movement(3 * 60)
@@ -34,20 +32,18 @@ target.forward_movement(len(observer.coords[0])-1)
 # target.change_course(270, 'left', omega=0.5)
 # target.forward_movement(360)
 
-tma = TMA(observer, target, sd=np.radians(1))
+tma = TMA(observer, target, sd=np.radians(0.5), seed=1)
+tma.print_verbose()
 
-# tma.set_target(seed = 297)
-# tma.set_noise(seed = 297)
-# p0 = tma.get_random_p0(seed = 297)
-# [b, d, c, v] = p0
+# tma.set_target(p0=tma.get_random_p0())
+# p0 = tma.get_random_p0(seed = 692 + 1000)
+# p0[0] = Ship.transform_to_angle(np.radians(p0[0]))
+# p0[2] = Ship.transform_to_angle(np.radians(p0[2]))
+# b, d, c, v = p0
 # p0 = [d * np.cos(b), d * np.sin(b), v * np.cos(c), v * np.sin(c)]
-
-p0 = [1, 1, 1, 1]
-print(tma.mle_algorithm_v5(p0))
-
-# r = tma.swarm(10)
-# tests.save_results(r)
+# tma.mle_algorithm_v6(p0)
 
 # # Запуск множества моделей
-# r = tma.swarm(100)
-# tests.save_results(r)
+# dict_results = tma.swarm(n=100, fixed_target=False, fixed_noise=False, p0=[0., 20., 45., 10.])
+# df = tests.get_df(dict_results)
+# tests.save_df(df)

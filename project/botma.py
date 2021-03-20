@@ -1,19 +1,22 @@
 import numpy as np
-from ship import Ship
+from project.ship import Ship
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
-import lm
+import project.lm
 import time
 
 
 class TMA(Ship):
-    def __init__(self, observer, target, mean=0, sd=np.radians(0.1), seed=None):
+    def __init__(self, observer, target, tau=2, mean=0, sd=np.radians(0.1), seed=None):
         np.random.seed(seed)
         self.mean = mean
         self.standart_deviation = sd
         self.observer = observer
         self.target = target
         self.observer_coords = np.array(self.observer.coords)
+        self.tau = tau
+        self.time = np.arange(0, len(self.observer_coords[0]), self.tau)
+        self.observer_data = np.vstack((self.observer_coords[:, self.time], self.time))
         self._set_bearings_and_distances()
         self.set_noise()
         self.true_params = self.target.get_params()
@@ -59,18 +62,29 @@ class TMA(Ship):
         return np.array(J).T
 
     @staticmethod
-    def _b_func2(data, params):
-        bearing, distance, course, velocity = params
-        x_velocity = velocity * np.cos(course)
-        y_velocity = velocity * np.sin(course)
-        d = data.T
-        num = 1000 * distance * np.sin(bearing) + y_velocity * \
-            d[2] - d[1]
-        den = 1000 * distance * np.cos(bearing) + x_velocity * \
-            d[2] - d[0]
-        angle = np.arctan2(num, den)
+    def _xy_func2(data, params):
+        x_origin, y_origin, x_velocity, y_velocity = params
+        n = len(data[0])
+        r_y = 1000 * y_origin + y_velocity * data[2] - data[1]
+        r_x = 1000 * x_origin + x_velocity * data[2] - data[0]
+        angle = np.arctan2(r_y, r_x)
+        return angle
 
-        return angle.reshape(data.shape[0], 1)
+    @staticmethod
+    def _xy_func2_jac(data, params):
+        n = len(data[0])
+        J = []
+        x, y, vx, vy = params
+        r_y = 1000 * y + vy * data[2] - data[1]
+        r_x = 1000 * x + vx * data[2] - data[0]
+        R2 = r_x ** 2 + r_y ** 2
+
+        J.append(-1000 * r_y / R2)
+        J.append(1000 * r_x / R2)
+        J.append(-(data[2] * r_y) / R2)
+        J.append((data[2] * r_x) / R2)
+
+        return np.array(J).T
 
     @staticmethod
     def _xy_func(data, params):
@@ -212,12 +226,21 @@ class TMA(Ship):
         perr = np.sqrt(np.diag(res[1]))
         return self.get_result(algorithm_name, res[0].copy(), perr, res[2], p0, stop_time - start_time)
 
-    def mle_algorithm_v5(self, p0):
+    def mle_algorithm_v5(self, p0, verbose=False):
         algorithm_name = 'ММП v5'
         # w = np.array([np.radians(0.1)**2]*1141)
         start_time = time.perf_counter()
         res = lm.lm(self._xy_func, self.observer_coords,
                     self.bearings_with_noise, p0, verbose=False, jac=self._xy_func_jac)
+        stop_time = time.perf_counter()
+        perr = np.sqrt(np.diag(res[1]))
+        return self.get_result(algorithm_name, res[0].copy(), perr, res[2], p0, stop_time - start_time)
+
+    def mle_algorithm_v6(self, p0, verbose=False):
+        algorithm_name = 'ММП v6'
+        start_time = time.perf_counter()
+        res = lm.lm(self._xy_func2, self.observer_data,
+                    self.bearings_with_noise[self.time], p0, verbose=verbose, jac=self._xy_func2_jac, std=self.standart_deviation)
         stop_time = time.perf_counter()
         perr = np.sqrt(np.diag(res[1]))
         return self.get_result(algorithm_name, res[0].copy(), perr, res[2], p0, stop_time - start_time)
@@ -251,6 +274,15 @@ class TMA(Ship):
         stop_time = time.perf_counter()
         return self.get_result(algorithm_name, res.copy(), [0, 0, 0, 0], [0], [0, 0, 0, 0], stop_time - start_time)
 
+    def print_verbose(self):
+        print('П0 = {}, Д0 = {} км, К = {}, V = {} м/c'.format(*self.target.get_params()))
+        print('СКОп = {}, '.format(np.degrees(self.standart_deviation)) + 'tau = {}'.format(self.tau))
+        print('Предельно допустимые значения ошибок КПДО:')
+        print('- 1градус по пеленгу,')
+        print('- 15%Д по дальности,')
+        print('- 10 градусов по курсу,')
+        print('- 10% по скорости.')
+
     def plot_trajectories(self):
         plt.plot(self.observer_coords[0], self.observer_coords[1])
         plt.plot(self.target.coords[0], self.target.coords[1])
@@ -261,7 +293,7 @@ class TMA(Ship):
                   self.target.coords[1][m+1] - self.target.coords[1][m], shape='full', lw=0, head_width=300, head_starts_at_zero=True, color='#ff7f0e')
         plt.axis('square')
         plt.xlim(-5000, 10000)
-        plt.ylim(0, 45000)
+        plt.ylim(-1000, 35000)
         plt.grid()
         ax = plt.gca()
         # if self.last_result is not None:
@@ -337,32 +369,62 @@ class TMA(Ship):
         ax.contour(X, Y, J, 10, lw=3, colors="k", linestyles="solid")
         plt.show()
 
-    def swarm(self, n):
+    def swarm(self, algorithm_name='ММП v6', n=100, seeded=True, fixed_target=False, fixed_noise=False, p0_func=None, p0=None):
         res_arr = []
+        if p0 is not None:
+            fixed_p0=True
+        else:
+            fixed_p0=False
+        if p0_func is None:
+            p0_func = self.get_random_p0
+        alg_dict = {'ММП v6': self.mle_algorithm_v6}
+        algorithm = alg_dict[algorithm_name]
+        if fixed_p0:
+            if algorithm_name in ['ММП v6', 'ММП v5']:
+                p0[0] = Ship.transform_to_angle(np.radians(p0[0]))
+                p0[2] = Ship.transform_to_angle(np.radians(p0[2]))
+                b, d, c, v = p0
+                p0 = [d * np.cos(b), d * np.sin(b), v * np.cos(c), v * np.sin(c)]
+            else:
+                p0[0] = Ship.transform_to_angle(np.radians(p0[0]))
+                p0[2] = Ship.transform_to_angle(np.radians(p0[2]))
         for i in range(n):
-            # p0 = [np.pi / 2, 10.0, np.pi / 4, 10.0]
-            self.set_target(seed = i)
-            p0 = self.get_random_p0(seed = i + 1000)
-            [b, d, c, v] = p0
-            p0 = [d * np.cos(b), d * np.sin(b), v * np.cos(c), v * np.sin(c)]
-            try:
-                # result = self.n_bearings_algorithm()
-                # result = self.mle_algorithm_v2(p0)
-                result = self.mle_algorithm_v5(p0)
-                res_arr.append(result)
-            except(RuntimeError):
-                print('Runtime error')
+            
+            if not fixed_target:
+                self.set_target(p0=p0_func(seed=i+100000))
+
+            if not fixed_p0:
+                if seeded:
+                    p0 = p0_func(seed = i)
+                else:
+                    p0 = p0_func()
+                if algorithm_name in ['ММП v6', 'ММП v5']:
+                    p0[0] = Ship.transform_to_angle(np.radians(p0[0]))
+                    p0[2] = Ship.transform_to_angle(np.radians(p0[2]))
+                    b, d, c, v = p0
+                    p0 = [d * np.cos(b), d * np.sin(b), v * np.cos(c), v * np.sin(c)]
+                else:
+                    p0[0] = Ship.transform_to_angle(np.radians(p0[0]))
+                    p0[2] = Ship.transform_to_angle(np.radians(p0[2]))
+
+            if not fixed_noise:
+                if seeded:
+                    self.set_noise(seed=i)
+                else: 
+                    self.set_noise()
+            
+            result = algorithm(p0)
+            res_arr.append(result)
         return res_arr
 
-    def get_random_p0(self, seed = None):
+    @staticmethod
+    def get_random_p0(seed = None):
         if seed is not None:
             np.random.seed(seed)
         b = 0
         d = np.random.uniform(5, 50)
         c = np.random.uniform(0, 180)
         v = np.random.uniform(5, 15)
-        b = Ship.transform_to_angle(np.radians(b))
-        c = Ship.transform_to_angle(np.radians(c))
         return [b, d, c, v]
 
     def linear(self):
@@ -371,6 +433,16 @@ class TMA(Ship):
         plt.plot(np.tan(self.shifted_bearings_with_noise))
         plt.show()
 
+    def get_observed_information(self):
+        params = Ship.convert_to_xy(self.last_result)
+        # f = self._xy_func2(self.observer_data, params)
+        # y = self.bearings_with_noise[self.time]
+        # l = np.sum(np.log(stats.norm.pdf(f, y, np.radians(0.5))))
+        J = self._xy_func2_jac(self.observer_data, params)
+        I = J.T.dot(J) / (self.standart_deviation ** 2)
+        from matplotlib import pyplot as plt
+        return I
+        
     def get_result(self, algorithm_name, res, perr, nfev, p0, t):
 
         # f = self.b_func(self.observer_coords, params)
@@ -425,20 +497,19 @@ class TMA(Ship):
         k_c = int(all(temp < [1, 1, 1, 1]))
 
         result = {algorithm_name: {'Истинные параметры': self.true_params,
-                                   'Полученные параметры': list(res),
+                                   'Полученные параметры': res,
                                    'Начальное приближение': p0,
-                                   'Оценка': [k_a, k_b, k_c],
-                                   'Число вычислений функции': nfev,
-                                   'Среднеквадратичное отклонение параметров': perr,
+                                   'СКО параметров': perr,
+                                   'Ка, Кб, Кс': [k_a, k_b, k_c],
                                    'Время работы': [t],
-                                   'Данные': self._get_data()}}
-
+                                   'Число вычислений функции, число итераций': nfev
+                                   }}
         return result
 
     def _get_data(self):
-        data = {'Время': range(len(self.bearings)),
-                'Истинный пеленг': np.degrees([Ship.transform_to_bearing(i) for i in self.bearings]),
-                'Расстояние': self.distance_array,
-                'Зашумленный пеленг': np.degrees([Ship.transform_to_bearing(i) for i in self.bearings_with_noise]),
+        data = {'Время': self.time,
+                'Истинный пеленг': np.degrees(list(map(Ship.transform_to_bearing, self.bearings)))[self.time],
+                'Расстояние': self.distance_array[self.time],
+                'Зашумленный пеленг': np.degrees(list(map(Ship.transform_to_bearing, self.bearings_with_noise)))[self.time],
                 }
         return data
