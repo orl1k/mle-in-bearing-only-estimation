@@ -20,9 +20,9 @@ target = Ship('Объект', target_bearing, target_distance, target_course,
 # Моделирование траекторий
 observer.forward_movement(3 * 60)
 observer.change_course(270, 'left', omega=0.5)
-observer.forward_movement(2 * 60)
-observer.change_course(90, 'right', omega=0.5)
 observer.forward_movement(5 * 60)
+observer.change_course(90, 'right', omega=0.5)
+observer.forward_movement(3 * 60)
 
 # Время движения объекта должно совпадать с временем наблюдателя для TMA
 target.forward_movement(len(observer.coords[0])-1)
@@ -32,8 +32,13 @@ target.forward_movement(len(observer.coords[0])-1)
 # target.change_course(270, 'left', omega=0.5)
 # target.forward_movement(360)
 
-tma = TMA(observer, target, sd=np.radians(0.5), seed=1)
+tma = TMA(observer, target=target, sd=np.radians(0.1))
 tma.print_verbose()
+dict_results = tma.swarm(algorithm_name='Метод N пеленгов',n=10, seeded=True)
+df = tests.get_df(dict_results)
+
+
+# dict_results = tma.swarm(n=10, seeded=True, fixed_target=False, fixed_noise=False, p0=[0., 20., 45., 10.])
 
 # tma.set_target(p0=tma.get_random_p0())
 # p0 = tma.get_random_p0(seed = 692 + 1000)

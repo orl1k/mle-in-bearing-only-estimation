@@ -3,7 +3,7 @@ from scipy.linalg import cho_factor, cho_solve
 from project.ship import Ship
 
 
-def lm(f, x_data, y_data, par, std=None, sigma=None, verbose=False, jac=None, lam=1e-2, down_factor=0.5, up_factor=3, max_it=100, ftol=1e-8):
+def lev_mar(f, x_data, y_data, par, std=None, sigma=None, verbose=False, jac=None, lam=1e-2, down_factor=0.5, up_factor=3, max_it=100, ftol=1e-8):
     i = 0  # Число итераций
     nf = 1  # Число вычислений функции
     status = -1
@@ -42,10 +42,6 @@ def lm(f, x_data, y_data, par, std=None, sigma=None, verbose=False, jac=None, la
                 if (verbose):
                     print('it = {},   lambda = {:.2e}, err = {:.4f}, par = {}, std = {}'.format(
                     i, lam, err, _format_par(par), np.degrees(np.sqrt(err / len(y_data)))))
-                    # print('hessian = ')
-                    # print(H)
-                    # print('hessian + lambda*diag(hessian) = ')
-                    # print(A)
 
                 L, low = cho_factor(A)
                 delta_par = cho_solve((L, low), b)
@@ -89,7 +85,7 @@ def lm(f, x_data, y_data, par, std=None, sigma=None, verbose=False, jac=None, la
     if std is None:
         return par, np.linalg.inv(H) * err / (len(y_data) - len(par)), [nf, i]
     else:
-        return par, np.linalg.inv(H / (std ** 2)), [nf, i]
+        return par, np.linalg.inv(H) * (std ** 2), [nf, i]
 
 def err_func(x_data, y_data, par, f_par, sigma):
     res = f_par - y_data

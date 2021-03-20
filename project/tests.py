@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import xlsxwriter
 import pandas as pd
 
 """
@@ -44,8 +43,8 @@ class Tests():
             df.loc[i] = flat_list
         return df
 
-    def save_df(self, df):
-        df.to_excel('results.xlsx', index=False)
+    def save_df(self, df, name='tests/results.xlsx'):
+        df.to_excel(name, index=False)
         
     def save_bearings_fig(self, true_distances, pred_distances):
         plt.plot(true_distances, linewidth=5.0)
