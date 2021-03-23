@@ -88,7 +88,7 @@ def lev_mar(
                 if not step:
                     lam *= up_factor
 
-            except (np.linalg.LinAlgError):
+            except np.linalg.LinAlgError:
                 lam *= up_factor
 
         par = new_par

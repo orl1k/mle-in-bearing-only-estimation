@@ -37,7 +37,7 @@ class CustomGym(gym.Env):
         self.sum_reward += reward
         # reward -= self.tma.distance_array[-1] * 1e10
         reward = -self.tma.distance_array[-1]
-        observation = self.tma.bearings_with_noise[-1], Ship.transform_to_angle(self.observer.get_course())
+        observation = self.tma.bearings_with_noise[-1], Ship.to_angle(self.observer.get_course())
 
         return observation, reward, done, {}
     
@@ -48,5 +48,5 @@ class CustomGym(gym.Env):
         self.observer = Ship('Наблюдатель', 0, 0, 0, 3)
         S0 = TMA.get_random_p0()
         self.target = Ship('Объект', S0[0], S0[1], S0[2], S0[3], self.observer, mode='bdcv')
-        observation = Ship.transform_to_angle(np.radians(S0[0])), Ship.transform_to_angle(self.observer.get_course())
+        observation = Ship.to_angle(np.radians(S0[0])), Ship.to_angle(self.observer.get_course())
         return observation  # reward, done, info can't be included
