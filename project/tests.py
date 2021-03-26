@@ -1,6 +1,6 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
+import matplotlib.pyplot as plt
 
 """
     Класс предназначен для сохранения результатов.
@@ -11,7 +11,6 @@ import pandas as pd
     Курс - .x градусов
     Скорость - .xx м / с
 
-    save_results() предназначен для сохранения результатов метода tma.swarm()
 """
 
 
