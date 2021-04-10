@@ -1,5 +1,5 @@
 import numpy as np
-import project.functions as f
+import tma.functions as f
 from scipy.linalg import cho_factor, cho_solve
 
 
@@ -80,7 +80,7 @@ def lev_mar(
                             i,
                             lam,
                             err,
-                            _format_par(par),
+                            f.convert_to_bdcv(par),
                             np.degrees(np.sqrt(err / len(y_data))),
                         )
                     )
@@ -160,8 +160,3 @@ def numeric_jac(f, x_data, par, f_par):
         grad = (f(x_data, par + d) - f_par) / h
         J.append(grad)
     return np.array(J).T
-
-
-def _format_par(par):
-    res = f.convert_to_bdcv(par)
-    return res

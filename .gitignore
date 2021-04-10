@@ -9,6 +9,5 @@ __pycache__/
 *.py[cod]
 
 # Temporary results
-results.xlsx
 tests/test.ipynb
 tests/test.csv

@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import project.functions as f
+import tma.functions as f
 
 
 class Object:
@@ -65,9 +65,10 @@ class Object:
         R = np.array(((c, -s), (s, c)))
         self.velocity = self.velocity.dot(R)
 
-    def change_course(self, new_course, turn, radius=None, omega=0.5, stop_time=0):
+    def change_course(self, new_course, turn, radius=None, omega=0.5, stop_time=None):
         """ поворот на новый курс new_course """
         new_course = np.radians(new_course)
+        t = 0
         if radius != None:
             theta = np.pi - 2 * np.arccos(
                 np.linalg.norm((self.velocity)) / (2 * radius)
@@ -77,14 +78,13 @@ class Object:
 
         if turn == "left":
             theta = -theta
-        t = 0
-        if stop_time != 0:
+        if stop_time != None:
             while t < stop_time:
                 t += 1
                 self.update_velocity(theta)
                 self.update_position()
         else:
-            while abs(self.get_course() - new_course) % 2 * np.pi > abs(theta):
+            while abs(self.get_course() - new_course) % (2 * np.pi) >= abs(theta):
                 t += 1
                 self.update_velocity(theta)
                 self.update_position()

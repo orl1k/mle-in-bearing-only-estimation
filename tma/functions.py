@@ -1,3 +1,4 @@
+import pandas as pd
 import numpy as np
 
 
@@ -62,142 +63,60 @@ def xy_func_jac(data, params):
 
     return np.array(J).T
 
-    def get_random_p0(seed=None):
-        rng = np.random.RandomState(seed)
-        b = 0
-        d = rng.uniform(5, 50)
-        c = rng.uniform(0, 360)
-        v = rng.uniform(5, 25)
-        return [b, d, c, v]
-
-    @staticmethod
-    def get_random_p0(seed=None):
-        rng = np.random.RandomState(seed)
-        b = 0
-        d = rng.uniform(5, 50)
-        c = rng.uniform(0, 360)
-        v = rng.uniform(5, 25)
-        return [b, d, c, v]
-
-    @staticmethod
-    def get_random_p0(seed=None):
-        rng = np.random.RandomState(seed)
-        b = 0
-        d = rng.uniform(5, 50)
-        c = rng.uniform(0, 360)
-        v = rng.uniform(5, 25)
-        return [b, d, c, v]
-
-    @staticmethod
-    def get_random_p0(seed=None):
-        rng = np.random.RandomState(seed)
-        b = 0
-        d = rng.uniform(5, 50)
-        c = rng.uniform(0, 360)
-        v = rng.uniform(5, 25)
-        return [b, d, c, v]
-
-    @staticmethod
-    def get_random_p0(seed=None):
-        rng = np.random.RandomState(seed)
-        b = 0
-        d = rng.uniform(5, 50)
-        c = rng.uniform(0, 360)
-        v = rng.uniform(5, 25)
-        return [b, d, c, v]
-
-    @staticmethod
-    def get_random_p0(seed=None):
-        rng = np.random.RandomState(seed)
-        b = 0
-        d = rng.uniform(5, 50)
-        c = rng.uniform(0, 360)
-        v = rng.uniform(5, 25)
-        return [b, d, c, v]
-
-    @staticmethod
-    def get_random_p0(seed=None):
-        rng = np.random.RandomState(seed)
-        b = 0
-        d = rng.uniform(5, 50)
-        c = rng.uniform(0, 360)
-        v = rng.uniform(5, 25)
-        return [b, d, c, v]
-
-    @staticmethod
-    def get_random_p0(seed=None):
-        rng = np.random.RandomState(seed)
-        b = 0
-        d = rng.uniform(5, 50)
-        c = rng.uniform(0, 360)
-        v = rng.uniform(5, 25)
-        return [b, d, c, v]
-
-    @staticmethod
-    def get_random_p0(seed=None):
-        rng = np.random.RandomState(seed)
-        b = 0
-        d = rng.uniform(5, 50)
-        c = rng.uniform(0, 360)
-        v = rng.uniform(5, 25)
-        return [b, d, c, v]
-
-    @staticmethod
-    def get_random_p0(seed=None):
-        rng = np.random.RandomState(seed)
-        b = 0
-        d = rng.uniform(5, 50)
-        c = rng.uniform(0, 360)
-        v = rng.uniform(5, 25)
-        return [b, d, c, v]
-
-    @staticmethod
-    def _dist_func(r_obs, r_tar):
-        return np.linalg.norm(r_obs - r_tar, 2, axis=0) / 1000
-
 
 def dist_func(r_obs, r_tar):
     return np.linalg.norm(r_obs - r_tar, 2, axis=0) / 1000
 
 
 def get_random_p0(seed=None):
+
     rng = np.random.RandomState(seed)
     b = 0
     d = rng.uniform(5, 50)
     c = rng.uniform(0, 360)
     v = rng.uniform(5, 25)
+
     return [b, d, c, v]
 
 
 def to_bearing(a):
+
     """ угол в радианах -> пеленг в радианах """
     a = (np.pi / 2) - ((2 * np.pi + a) * (a < 0) + a * (a >= 0))
+
     return a if a >= 0 else a + 2 * np.pi
 
 
 def to_angle(b):
+
     """ пеленг в радианах -> угол в радианах """
     angle = (np.pi / 2) - b
+
     return angle if abs(angle) <= np.pi else (2 * np.pi) + angle
 
 
 def convert_to_polar(coords):
+
     x, y = coords
     distance = np.linalg.norm(coords, 2, axis=0)
     angle = np.arctan2(y, x)
+
     return [angle, distance]
 
 
 def convert_to_bdcv(params):
+
     x, y, vx, vy = params
     b, d = convert_to_polar([x, y])
     c, v = convert_to_polar([vx, vy])
     b = np.degrees(to_bearing(b))
     c = np.degrees(to_bearing(c))
+
     return np.array([b, d, c, v])
 
 
 def convert_to_xy(params):
+
     b, d, c, v = params
     b = to_angle(np.radians(b))
     c = to_angle(np.radians(c))
@@ -205,4 +124,48 @@ def convert_to_xy(params):
     y = d * np.sin(b)
     vx = v * np.cos(c)
     vy = v * np.sin(c)
+
     return np.array([x, y, vx, vy])
+
+
+def get_df(res):
+    try:
+        algorithm_name = list(res[0].keys())[0]
+    except AttributeError:
+        res = np.ravel(res)
+        algorithm_name = "ММП в реальном времени"
+    df = pd.DataFrame(
+        columns=[
+            "П0_ист",
+            "Д0_ист",
+            "К0_ист",
+            "V0_ист",
+            "П0_расч",
+            "Д0_расч",
+            "К0_расч",
+            "V0_расч",
+            "П0_апр",
+            "Д0_апр",
+            "К0_апр",
+            "V0_апр",
+            "Птек_ист",
+            "Дтек_ист",
+            "Птек_расч",
+            "Дтек_расч",
+            "СКО X",
+            "СКО Y",
+            "СКО VX",
+            "СКО VY",
+            "Ка",
+            "Кб",
+            "Успех",
+            "t",
+            "Nf",
+            "Iter",
+        ]
+    )
+    for i, r in enumerate(res):
+        r = r[algorithm_name]
+        flat_list = [item for sublist in r.values() for item in sublist]
+        df.loc[i] = flat_list
+    return df
