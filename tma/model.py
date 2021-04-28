@@ -3,7 +3,7 @@ from tma.object import Object
 import tma.functions as f
 
 
-class Model():
+class Model:
     def __init__(
         self,
         observer,
@@ -42,11 +42,11 @@ class Model():
 
     def new_target(self, p0=None, seed=None):
         if p0 is None:
-            np.random.seed(seed)
+            rng = np.random.RandomState(seed)
             b = 0
-            d = np.random.uniform(5, 50)
-            c = np.random.uniform(0, 180)
-            v = np.random.uniform(5, 15)
+            d = rng.uniform(5, 50)
+            c = rng.uniform(0, 180)
+            v = rng.uniform(5, 15)
         else:
             b, d, c, v = p0
 
@@ -74,12 +74,6 @@ class Model():
         ry = self.target_data[1] - self.observer_data[1]
         self.bearings = np.arctan2(ry, rx)
         self.distances = f.dist_func(self.observer_data, self.target_data)
-
-    def get_observed_information(self):
-        params = f.convert_to_xy(self.last_result)
-        J = f.xy_func_jac(self.observer_data, params)
-        I = J.T.dot(J) / (self.noise_std ** 2)
-        return I
 
     def get_data(self):
         data = {

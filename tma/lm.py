@@ -17,7 +17,7 @@ def lev_mar(
     up_factor=3,
     max_it=1000,
     ftol=1e-8,
-    return_lambda = False
+    return_lambda=False,
 ):
     i = 0  # Число итераций
     nf = 1  # Число вычислений функции
@@ -61,7 +61,7 @@ def lev_mar(
 
         while (not step) and (i < max_it):
             try:
-                A = H + lam * np.diag(np.diag(H))  # Fletcher modification
+                A = H + lam * np.diag(np.diag(H))  # Marquardt modification
                 # A = H + lam * np.eye(len(par)) # Standart LM
 
                 L, low = cho_factor(A)
@@ -118,7 +118,11 @@ def lev_mar(
     if verbose:
         print(
             "it = {},   lambda = {:.2e}, err = {:.4f}, par = {}, std = {}".format(
-                i, lam, err, _format_par(par), np.degrees(np.sqrt(err / len(y_data)))
+                i,
+                lam,
+                err,
+                f.convert_to_bdcv(par),
+                np.degrees(np.sqrt(err / len(y_data))),
             )
         )
         print(statuses[status][0])
@@ -137,7 +141,6 @@ def lev_mar(
                 return par, np.linalg.inv(H) * (std ** 2), [nf, i]
             except np.linalg.LinAlgError:
                 return par, np.nan * np.ones(shape=(4, 4)), [nf, i]
-        
 
 
 def err_func(x_data, y_data, par, f_par, sigma):

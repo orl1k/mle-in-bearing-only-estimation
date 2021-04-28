@@ -1,16 +1,17 @@
 import pandas as pd
 import numpy as np
+from collections import namedtuple
 
 
 def bd_func(data, params):
 
-    bearing, distance, course, velocity = params
+    b, d, c, v = params
     n = len(data[0])
-    x_velocity = velocity * np.cos(course)
-    y_velocity = velocity * np.sin(course)
-    num = 1000 * distance * np.sin(bearing) + y_velocity * np.array(range(n)) - data[1]
-    den = 1000 * distance * np.cos(bearing) + x_velocity * np.array(range(n)) - data[0]
-    angle = np.arctan2(num, den)
+    vx = v * np.cos(c)
+    vy = v * np.sin(c)
+    r_y = 1000 * d * np.sin(b) + vy * np.array(range(n)) - data[1]
+    r_x = 1000 * d * np.cos(b) + vx * np.array(range(n)) - data[0]
+    angle = np.arctan2(r_y, r_x)
 
     return angle
 
@@ -40,12 +41,12 @@ def bd_func_jac(data, params):
 
 def xy_func(data, params):
 
-    x_origin, y_origin, x_velocity, y_velocity = params
-    r_y = 1000 * y_origin + y_velocity * data[2] - data[1]
-    r_x = 1000 * x_origin + x_velocity * data[2] - data[0]
-    angle = np.arctan2(r_y, r_x)
+    x, y, vx, vy = params
+    r_y = 1000 * y + vy * data[2] - data[1]
+    r_x = 1000 * x + vx * data[2] - data[0]
+    b = np.arctan2(r_y, r_x)
 
-    return angle
+    return b
 
 
 def xy_func_jac(data, params):
@@ -98,10 +99,10 @@ def to_angle(b):
 def convert_to_polar(coords):
 
     x, y = coords
-    distance = np.linalg.norm(coords, 2, axis=0)
-    angle = np.arctan2(y, x)
+    a = np.linalg.norm(coords, 2, axis=0)
+    b = np.arctan2(y, x)
 
-    return [angle, distance]
+    return [b, a]
 
 
 def convert_to_bdcv(params):
@@ -128,47 +129,79 @@ def convert_to_xy(params):
     return np.array([x, y, vx, vy])
 
 
-def get_df(res):
-    try:
-        algorithm_name = list(res[0].keys())[0]
-    except AttributeError:
-        res = np.ravel(res)
-        algorithm_name = "ММП в реальном времени"
-    df = pd.DataFrame(
-        columns=[
-            "П0_ист",
-            "Д0_ист",
-            "К0_ист",
-            "V0_ист",
-            "П0_расч",
-            "Д0_расч",
-            "К0_расч",
-            "V0_расч",
-            "П0_апр",
-            "Д0_апр",
-            "К0_апр",
-            "V0_апр",
-            "Птек_ист",
-            "Дтек_ист",
-            "Птек_расч",
-            "Дтек_расч",
-            "СКО X",
-            "СКО Y",
-            "СКО VX",
-            "СКО VY",
-            "Ка",
-            "Кб",
-            "Успех",
+def get_df(result):
+
+    mapper = {
+        "b0": "П0_ист",
+        "d0": "Д0_ист",
+        "c0": "К0_ист",
+        "v0": "V0_ист",
+        "res_b0": "П0_расч",
+        "res_d0": "Д0_расч",
+        "res_c0": "К0_расч",
+        "res_v0": "V0_расч",
+        "init_b0": "П0_апр",
+        "init_d0": "Д0_апр",
+        "init_c0": "К0_апр",
+        "init_v0": "V0_апр",
+        "cur_b0": "Птек_ист",
+        "cur_d0": "Дтек_ист",
+        "cur_res_b0": "Птек_расч",
+        "cur_res_d0": "Дтек_расч",
+        "std_x": "СКО X",
+        "std_y": "СКО Y",
+        "std_vx": "СКО VX",
+        "std_vy": "СКО VY",
+        "ka": "Ка",
+        "kb": "Кб",
+        "kc": "Успех",
+        "t": "Время",
+        "nf": "Вычисления",
+        "iter": "Итерации",
+    }
+
+    if isinstance(result, list):
+        result_list = map(parser, result)
+    else:
+        result_list = map(parser, [result])
+
+    return pd.DataFrame(result_list).rename(columns=mapper)
+
+
+def parser(result):
+    parsed_res = namedtuple(
+        "res",
+        [
+            "b0",
+            "d0",
+            "c0",
+            "v0",
+            "res_b0",
+            "res_d0",
+            "res_c0",
+            "res_v0",
+            "init_b0",
+            "init_d0",
+            "init_c0",
+            "init_v0",
+            "cur_b0",
+            "cur_d0",
+            "cur_res_b0",
+            "cur_res_d0",
+            "std_x",
+            "std_y",
+            "std_vx",
+            "std_vy",
+            "ka",
+            "kb",
+            "kc",
             "t",
-            "Nf",
-            "Iter",
-        ]
+            "nf",
+            "iter",
+        ],
     )
-    for i, r in enumerate(res):
-        r = r[algorithm_name]
-        flat_list = [item for sublist in r.values() for item in sublist]
-        df.loc[i] = flat_list
-    return df
+
+    return parsed_res(*(i for sublist in result for i in sublist))
 
 
 def df_to_docx(df, path):
