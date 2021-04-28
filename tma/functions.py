@@ -169,3 +169,21 @@ def get_df(res):
         flat_list = [item for sublist in r.values() for item in sublist]
         df.loc[i] = flat_list
     return df
+
+
+def df_to_docx(df, path):
+
+    import docx
+
+    doc = docx.Document()
+    t = doc.add_table(df.shape[0] + 2, df.shape[1])
+    t.style = "Table Grid"
+
+    for j in range(df.shape[-1]):
+        t.cell(0, j).text = df.columns[j]
+
+    for i in range(df.shape[0]):
+        for j in range(df.shape[-1]):
+            t.cell(i + 1, j).text = str(df.values[i, j])
+
+    doc.save(path)

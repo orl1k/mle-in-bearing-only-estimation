@@ -11,3 +11,4 @@ __pycache__/
 # Temporary results
 tests/test.ipynb
 tests/test.csv
+/tmp
