@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 """
 
 
-class Tests:
+class SaveResults:
     def __init__(self, name):
         self.test_name = name
         self.results = {}

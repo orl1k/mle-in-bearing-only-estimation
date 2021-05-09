@@ -1,9 +1,8 @@
 import numpy as np
 from tma.object import Object
-from tma.tests import Tests
 from tma.model import Model
-
-# Пример моделирования
+from tma.algorithms import Algorithms
+from tma.helper_functions import get_df, convert_to_xy
 
 observer_x, observer_y, observer_course, observer_velocity = 0.0, 0.0, 0.0, 5.0
 observer = Object(
@@ -41,21 +40,9 @@ observer.forward_movement(3 * 60)
 
 target.forward_movement(len(observer.coords[0]) - 1)
 
-from tma.algorithms import Algorithms
-from tma.functions import get_df
-from tma.plot import plot_trajectory, plot_bearings, plot_trajectories
-
-model = Model(observer, target=target)
+model = Model(observer, target=target, verbose=True)
 alg = Algorithms(model)
 
-# print(alg.mle_algorithm_v2([1, 1, 1, 1]))
-result = alg.mle_v2([1, 1, 1, 1])
-
-# plot_bearings(model, result)
-
-# target.forward_movement(7 * 60)
-# target.change_course(270, "left", omega=0.5)
-# target.forward_movement(len(observer.coords[0]) - len(target.coords[0]))
-
-# dict_results = swarm(n=100, fixed_target=False, fixed_noise=False, p0=[0., 20., 45., 10.])
-# df = f.get_df(dict_results)
+p0 = convert_to_xy([0.0, 25.0, 90.0, 7.0])
+res = alg.n_bearings()
+alg.print_result(res)

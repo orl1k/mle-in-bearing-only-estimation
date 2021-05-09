@@ -1,6 +1,6 @@
 import numpy as np
 from tma.object import Object
-import tma.helper_functions as f
+from tma.helper_functions import dist_func, to_bearing
 
 
 class Model:
@@ -31,11 +31,12 @@ class Model:
             self.target = target
             self.set_data()
             self.set_bearings()
-            self.set_noise()
+            self.set_noise(seed=seed)
         if verbose:
             self.verbose = True
             print(
-                "СКОп = {:.1f}, ".format(np.degrees(self.noise_std))
+                "Параметры модели: "
+                + "СКО = {:.1f}, ".format(np.degrees(self.noise_std))
                 + "tau = {}, ".format(self.tau)
                 + "end_time = {}".format(self.end_t)
             )
@@ -60,22 +61,26 @@ class Model:
     def set_data(self):
         time = np.arange(0, self.end_t + 1, self.tau)
         self.observer_data = np.vstack((self.observer_coords[:, time], time))
-        self.target_data = np.vstack((np.array(self.target.coords)[:, time], time))
+        self.target_data = np.vstack(
+            (np.array(self.target.coords)[:, time], time)
+        )
         self.true_params = np.array(self.target.get_params())
 
     def set_bearings(self):
         rx = self.target_data[0] - self.observer_data[0]
         ry = self.target_data[1] - self.observer_data[1]
         self.bearings = np.arctan2(ry, rx)
-        self.distances = f.dist_func(self.observer_data, self.target_data)
+        self.distances = dist_func(self.observer_data, self.target_data)
 
     def get_data(self):
         data = {
             "Время": self.observer_data[2],
-            "Истинный пеленг": np.degrees(list(map(f.to_bearing, self.bearings))),
+            "Истинный пеленг": np.degrees(
+                list(map(to_bearing, self.bearings))
+            ),
             "Расстояние": self.distances,
             "Зашумленный пеленг": np.degrees(
-                list(map(f.to_bearing, self.bearings_with_noise))
+                list(map(to_bearing, self.bearings_with_noise))
             ),
         }
         return data

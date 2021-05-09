@@ -1,5 +1,10 @@
 import numpy as np
-import tma.helper_functions as f
+from tma.helper_functions import (
+    to_angle,
+    to_bearing,
+    convert_to_xy,
+    convert_to_bdcv,
+)
 
 
 class Object:
@@ -7,7 +12,7 @@ class Object:
 
         if mode == "xycv":
             self.x_origin, self.y_origin, course, velocity = args
-            course = f.to_angle(np.radians(course))
+            course = to_angle(np.radians(course))
             self.x_velocity = velocity * np.cos(course)
             self.y_velocity = velocity * np.sin(course)
 
@@ -18,27 +23,47 @@ class Object:
                 self.y_origin,
                 self.x_velocity,
                 self.y_velocity,
-            ) = f.convert_to_xy(args[:4])
-        
-        elif mode == "xy":
-            self.x_origin, self.y_origin, self.x_velocity, self.y_velocity = args
+            ) = convert_to_xy(args[:4])
 
-        self.true_params = [self.x_origin, self.y_origin, self.x_velocity, self.y_velocity]
+        elif mode == "xy":
+            (
+                self.x_origin,
+                self.y_origin,
+                self.x_velocity,
+                self.y_velocity,
+            ) = args
+
+        self.true_params = (
+            self.x_origin,
+            self.y_origin,
+            self.x_velocity,
+            self.y_velocity,
+        )
+        
         self.x_origin *= 1000
         self.y_origin *= 1000
-        # fix true_params when xy
         self.verbose = verbose
         self.name = name
-        self.current_position = np.array([self.x_origin, self.y_origin], dtype=np.float64)
-        self.velocity = np.array([self.x_velocity, self.y_velocity], dtype=np.float64)
+        self.current_position = np.array(
+            [self.x_origin, self.y_origin], dtype=np.float64
+        )
+        self.velocity = np.array(
+            [self.x_velocity, self.y_velocity], dtype=np.float64
+        )
         self.coords = [[self.x_origin], [self.y_origin]]
 
+        if verbose:
+            print(
+                f"{self.name} имеет начальные "
+                + f"параметры {convert_to_bdcv(self.true_params)}"
+            )
+
     def get_course(self):
-        angle = np.arctan2(self.velocity[1], self.velocity[0])
-        return f.to_bearing(angle)
+        angle = np.arctan2(*self.velocity[::-1])
+        return to_bearing(angle)
 
     def get_params(self):
-        return self.true_params.copy()
+        return self.true_params
 
     def forward_movement(self, time):
         for _ in range(time):
@@ -57,6 +82,7 @@ class Object:
 
     def update_velocity(self, theta):
         """ поворот вектора скорости на угол theta """
+
         c, s = np.cos(theta), np.sin(theta)
         R = np.array(((c, -s), (s, c)))
         self.velocity = self.velocity.dot(R)
@@ -82,6 +108,10 @@ class Object:
             t += 1
             self.update_velocity(theta)
             self.update_current_position()
-        
+
         if self.verbose:
-            print(f"{self.name} перешёл на курс {np.degrees(self.get_course())}° за {t}с")
+            print(
+                f"{self.name} перешёл на курс "
+                + f"{np.degrees(self.get_course()):.1f}°" 
+                + f"(угловая скорость {omega}) за {t}с"
+            )

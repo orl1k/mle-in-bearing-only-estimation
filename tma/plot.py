@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
-import tma.helper_functions as f
+from tma.helper_functions import convert_to_xy, xy_func, to_bearing
 
 
 def plot_trajectories2(model):
@@ -82,13 +82,17 @@ def plot_trajectories(model):
 
 def plot_bearings(model, result):
 
-    params = f.convert_to_xy(result["Метод N пеленгов"]["Полученные параметры"])
+    params = convert_to_xy(
+        result["Метод N пеленгов"]["Полученные параметры"]
+    )
     sns.set_style("darkgrid")
     x = model.observer_data[2]
-    y = np.degrees([f.to_bearing(i) for i in f.xy_func(model.observer_data, params)])
+    y = np.degrees(
+        [to_bearing(i) for i in xy_func(model.observer_data, params)]
+    )
     sns.lineplot(
         x,
-        np.degrees([f.to_bearing(i) for i in model.bearings]),
+        np.degrees([to_bearing(i) for i in model.bearings]),
         linewidth=4,
     )
 
