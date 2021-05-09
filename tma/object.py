@@ -1,5 +1,5 @@
 import numpy as np
-import tma.functions as f
+import tma.helper_functions as f
 
 
 class Object:

@@ -1,6 +1,6 @@
 import numpy as np
 from tma.object import Object
-import tma.functions as f
+import tma.helper_functions as f
 
 
 class Model:
@@ -41,14 +41,8 @@ class Model:
             )
 
     def new_target(self, p0=None, seed=None):
-        if p0 is None:
-            rng = np.random.RandomState(seed)
-            b = 0
-            d = rng.uniform(5, 50)
-            c = rng.uniform(0, 180)
-            v = rng.uniform(5, 15)
-        else:
-            b, d, c, v = p0
+
+        b, d, c, v = self.get_random_p0(seed=seed) if p0 is None else p0
 
         target = Object("Объект", b, d, c, v, self.observer, mode="bdcv")
         target.forward_movement(len(self.observer_coords[0]) - 1)
@@ -85,3 +79,12 @@ class Model:
             ),
         }
         return data
+
+    @staticmethod
+    def get_random_p0(seed=None):
+        rng = np.random.RandomState(seed)
+        b = 0
+        d = rng.uniform(5, 50)
+        c = rng.uniform(0, 180)
+        v = rng.uniform(5, 15)
+        return [b, d, c, v]

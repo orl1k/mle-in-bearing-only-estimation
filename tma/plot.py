@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
-import tma.functions as f
+import tma.helper_functions as f
 
 
 def plot_trajectories2(model):

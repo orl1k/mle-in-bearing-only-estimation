@@ -41,12 +41,15 @@ observer.forward_movement(3 * 60)
 
 target.forward_movement(len(observer.coords[0]) - 1)
 
-from tma.algorithms import mle_algorithm_v2, swarm
+from tma.algorithms import Algorithms
 from tma.functions import get_df
 from tma.plot import plot_trajectory, plot_bearings, plot_trajectories
 
-model = Model(observer, target=target, noise_std=np.radians(1))
-result = mle_algorithm_v2(model, p0=[1, 1, 1, 1])
+model = Model(observer, target=target)
+alg = Algorithms(model)
+
+# print(alg.mle_algorithm_v2([1, 1, 1, 1]))
+result = alg.mle_v2([1, 1, 1, 1])
 
 # plot_bearings(model, result)
 
