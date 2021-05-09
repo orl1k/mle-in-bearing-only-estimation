@@ -23,12 +23,11 @@ class Object:
         elif mode == "xy":
             self.x_origin, self.y_origin, self.x_velocity, self.y_velocity = args
 
+        self.true_params = [self.x_origin, self.y_origin, self.x_velocity, self.y_velocity]
         self.x_origin *= 1000
         self.y_origin *= 1000
-        
         # fix true_params when xy
         self.verbose = verbose
-        self.true_params = list(args[:4])
         self.name = name
         self.current_position = np.array([self.x_origin, self.y_origin], dtype=np.float64)
         self.velocity = np.array([self.x_velocity, self.y_velocity], dtype=np.float64)

@@ -126,7 +126,7 @@ def convert_to_xy(params):
     vx = v * np.cos(c)
     vy = v * np.sin(c)
 
-    return np.array([x, y, vx, vy])
+    return np.array((x, y, vx, vy))
 
 
 def get_df(result):

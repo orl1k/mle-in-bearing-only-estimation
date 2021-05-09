@@ -163,13 +163,19 @@ class Algorithms:
         if fixed_target:
             target_f = lambda x: None
         else:
-            target_func = p0_func if p0_func is not None else self.model.get_random_p0
+            target_func = (
+                target_func if target_func is not None else self.model.get_random_p0
+            )
             target_f = lambda x: self.model.new_target(p0=target_func(seed=x))
 
-        if seeded:
-            p0_f = lambda x: self.model.get_random_p0(seed=x + 100000)
+        if p0 is not None:
+            p0_f = lambda x: p0
         else:
-            p0_f = lambda x: self.model.get_random_p0(seed=x)
+            if seeded:
+                p0_f = lambda x: self.model.get_random_p0(seed=x + 100000)
+            else:
+                p0_f = lambda x: self.model.get_random_p0(seed=x)
+
         noise_f = lambda x: self.model.set_noise(seed=x)
 
         alg_dict = {
@@ -184,9 +190,8 @@ class Algorithms:
 
         for i in iterator:
             target_f(i)
-            p0 = f.convert_to_xy(p0_f(i))
             noise_f(i)
-            result = algorithm(p0)
+            result = algorithm(f.convert_to_xy(p0_f(i)))
             res_arr.append(result)
 
         return res_arr
@@ -196,14 +201,9 @@ class Algorithms:
         try:
             cov, nfi, p0 = args
             perr = self.handle_cov_perr(cov)
-            if algorithm_name in [
-                "mle_algorithm_v1",
-                "mle_algorithm_v2",
-                "dynamic_mle",
-            ]:
-                p0 = f.convert_to_bdcv(p0)
+            p0_res = f.convert_to_bdcv(p0)
         except:
-            perr = p0 = [np.nan] * 4
+            perr = p0_res = [np.nan] * 4
             nfi = [np.nan] * 2
 
         r = self.model.bearings_with_noise - f.xy_func(self.model.observer_data, res)
@@ -232,14 +232,15 @@ class Algorithms:
         r = np.degrees(r)
         k_a = np.sum(r ** 2) / len(r)
 
+        true_res = f.convert_to_bdcv(self.model.true_params)
         d = np.array([1 / 1, 1 / 0.15, 1 / 10, 1 / 0.1])
-        delta = self._get_delta(d, b_end_pred, d_end_pred)
+        delta = self._get_delta(d, b_end_pred, d_end_pred, res, true_res)
 
         k_b = np.sum(delta) / 4
         k_c = []
 
         for d in self.D:
-            delta = self._get_delta(d, b_end_pred, d_end_pred)
+            delta = self._get_delta(d, b_end_pred, d_end_pred, res, true_res)
             k_c.append(int(all(delta < [1, 1, 1, 1])))
 
         current_values = [
@@ -264,9 +265,9 @@ class Algorithms:
         )
 
         return result(
-            self.model.true_params,
+            true_res,
             res,
-            p0,
+            p0_res,
             current_values,
             perr,
             [k_a, k_b, k_c],
@@ -274,12 +275,13 @@ class Algorithms:
             nfi,
         )
 
-    def _get_delta(self, d, b_end_pred, d_end_pred):
+    def _get_delta(self, d, b_end_pred, d_end_pred, res, true_res):
         b_end = np.degrees(f.to_bearing(self.model.bearings[-1]))
         d_end = self.model.distances[-1]
+        d = d.copy()
         d[1] /= d_end
-        d[3] /= self.model.true_params[3]
-        temp = self.model.true_params - self.model.last_result
+        d[3] /= true_res[3]
+        temp = true_res - res
         temp[0:2] = abs(b_end_pred - b_end), abs(d_end_pred - d_end)
         temp[0] = (temp[0] + 180) % 360 - 180
         temp[2] = (temp[2] + 180) % 360 - 180
