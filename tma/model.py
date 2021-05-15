@@ -1,5 +1,5 @@
 import numpy as np
-from tma.object import Object
+from tma.object import Target
 from tma.helper_functions import dist_func, to_bearing
 
 
@@ -25,27 +25,32 @@ class Model:
             self.end_t = len(self.observer.coords[0]) - 1
         else:
             self.end_t = end_t
-        if target == None:
+        if target is None:
             self.new_target(seed=seed)
         else:
+            if len(target.coords[0]) != len(observer.coords[0]):
+                raise ValueError(
+                    "Время движения наблюдателя "
+                    + "и объека должны быть одинаковыми"
+                )
             self.target = target
             self.set_data()
             self.set_bearings()
             self.set_noise(seed=seed)
         if verbose:
-            self.verbose = True
+            self.verbose = verbose
             print(
                 "Параметры модели: "
-                + "СКО = {:.1f}, ".format(np.degrees(self.noise_std))
-                + "tau = {}, ".format(self.tau)
-                + "end_time = {}".format(self.end_t)
+                + f"СКО = {np.degrees(self.noise_std):.1f}, "
+                + f"tau = {self.tau}, "
+                + f"end_time = {self.end_t}"
             )
 
     def new_target(self, p0=None, seed=None):
 
         b, d, c, v = self.get_random_p0(seed=seed) if p0 is None else p0
 
-        target = Object("Объект", b, d, c, v, self.observer, mode="bdcv")
+        target = Target(self.observer, b, d, c, v)
         target.forward_movement(len(self.observer_coords[0]) - 1)
         self.target = target
         self.set_data()

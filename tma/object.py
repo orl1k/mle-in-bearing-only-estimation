@@ -1,4 +1,5 @@
 import numpy as np
+from abc import ABC, abstractmethod
 from tma.helper_functions import (
     to_angle,
     to_bearing,
@@ -7,8 +8,9 @@ from tma.helper_functions import (
 )
 
 
-class Object:
-    def __init__(self, name, *args, mode="xycv", verbose=False):
+class Object(ABC):
+    @abstractmethod
+    def __init__(self, *args, mode="xycv", verbose=False):
 
         if mode == "xycv":
             self.x_origin, self.y_origin, course, velocity = args
@@ -24,8 +26,10 @@ class Object:
                 self.x_velocity,
                 self.y_velocity,
             ) = convert_to_xy(args[:4])
+            self.x_origin += observer.x_origin
+            self.y_origin += observer.y_origin
 
-        elif mode == "xy":
+        elif mode == "xyv":
             (
                 self.x_origin,
                 self.y_origin,
@@ -39,11 +43,10 @@ class Object:
             self.x_velocity,
             self.y_velocity,
         )
-        
+
         self.x_origin *= 1000
         self.y_origin *= 1000
         self.verbose = verbose
-        self.name = name
         self.current_position = np.array(
             [self.x_origin, self.y_origin], dtype=np.float64
         )
@@ -51,12 +54,6 @@ class Object:
             [self.x_velocity, self.y_velocity], dtype=np.float64
         )
         self.coords = [[self.x_origin], [self.y_origin]]
-
-        if verbose:
-            print(
-                f"{self.name} имеет начальные "
-                + f"параметры {convert_to_bdcv(self.true_params)}"
-            )
 
     def get_course(self):
         angle = np.arctan2(*self.velocity[::-1])
@@ -112,6 +109,31 @@ class Object:
         if self.verbose:
             print(
                 f"{self.name} перешёл на курс "
-                + f"{np.degrees(self.get_course()):.1f}°" 
+                + f"{np.degrees(self.get_course()):.1f}° "
                 + f"(угловая скорость {omega}) за {t}с"
             )
+
+    @staticmethod
+    def print_initial(name, args):
+        print(f"{name} имеет начальные " + f"параметры {args}")
+
+    def __repr__(self):
+        return self.__class__.__name__ + str(self.params)
+
+
+class Observer(Object):
+    def __init__(self, *args, verbose=False, mode="xycv"):
+        super().__init__(*args, mode=mode, verbose=verbose)
+        self.params = args
+        self.name = "Наблюдатель"
+        if verbose:
+            super().print_initial(self.name, args)
+
+
+class Target(Object):
+    def __init__(self, observer, *args, verbose=False, mode="bdcv"):
+        super().__init__(*args, observer, mode=mode, verbose=verbose)
+        self.params = args
+        self.name = "Объект"
+        if verbose:
+            super().print_initial(self.name, args)

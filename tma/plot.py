@@ -82,9 +82,7 @@ def plot_trajectories(model):
 
 def plot_bearings(model, result):
 
-    params = convert_to_xy(
-        result["Метод N пеленгов"]["Полученные параметры"]
-    )
+    params = convert_to_xy(result["Метод N пеленгов"]["Полученные параметры"])
     sns.set_style("darkgrid")
     x = model.observer_data[2]
     y = np.degrees(

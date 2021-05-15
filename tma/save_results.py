@@ -2,17 +2,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-"""
-    Класс предназначен для сохранения результатов.
-
-    Форматы:
-    Пеленг - .x градусов
-    Дистанция - .xxx м
-    Курс - .x градусов
-    Скорость - .xx м / с
-
-"""
-
 
 class SaveResults:
     def __init__(self, name):

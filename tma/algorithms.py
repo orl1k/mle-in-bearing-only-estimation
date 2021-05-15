@@ -37,6 +37,12 @@ class Algorithms:
             (1 / 1, 1 / 0.15, 1 / 10, 1 / 0.15),
             (1 / 1, 1 / 0.2, 1 / 15, 1 / 0.2),
         )
+        self.alg_dict = {
+            "ММП2": self.mle_v1,
+            "ММП": self.mle_v2,
+            "N пеленгов": self.n_bearings,
+            "ДММП": self.dynamic_mle,
+        }
 
     @full_output
     @timing
@@ -122,7 +128,6 @@ class Algorithms:
             self.model_t.distances = self.model.distances[
                 : (i // self.model.tau + 1)
             ]
-            start_time = time.perf_counter()
             res = lev_mar(
                 f.xy_func,
                 self.model_t.observer_data,
@@ -130,7 +135,6 @@ class Algorithms:
                 p0,
                 jac=f.xy_func_jac,
             )
-            stop_time = time.perf_counter()
             res_arr.append(
                 _get_result(
                     self.model_t,
@@ -175,18 +179,11 @@ class Algorithms:
             if seeded:
                 p0_f = lambda x: self.model.get_random_p0(seed=x + 100000)
             else:
-                p0_f = lambda x: self.model.get_random_p0(seed=x)
+                p0_f = self.model.get_random_p0
 
         noise_f = lambda x: self.model.set_noise(seed=x)
 
-        alg_dict = {
-            "ММП2": self.mle_v1,
-            "ММП": self.mle_v2,
-            "N пеленгов": self.n_bearings,
-            "ДММП": self.dynamic_mle,
-        }
-        algorithm = alg_dict[algorithm_name]
-
+        algorithm = self.alg_dict[algorithm_name]
         iterator = range(n) if seeded else [None] * n
 
         for i in iterator:

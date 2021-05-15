@@ -29,7 +29,6 @@ def bd_func_jac(data, params):
     J.append((1000 * (np.sin(b) * r_x - np.cos(b) * x * r_y)) / R2)
     J.append((vx * r_x + vy * r_y) * np.arange(n) / R2)
     J.append((np.sin(c) * r_x - np.cos(c) * r_y) * np.arange(n) / R2)
-
     return np.array(J).T
 
 
@@ -52,7 +51,6 @@ def xy_func_jac(data, params):
     J.append(1000 * r_x / R2)
     J.append(-(data[2] * r_y) / R2)
     J.append((data[2] * r_x) / R2)
-
     return np.array(J).T
 
 
