@@ -1,7 +1,7 @@
 import numpy as np
-from tma.object import Observer, Target
+from tma.objects import Observer, Target
 from tma.model import Model
-from tma.algorithms import Algorithms
+from tma.algorithms import Algorithms, Swarm
 from tma.helper_functions import get_df, convert_to_xy
 
 observer_x, observer_y, observer_course, observer_velocity = 0.0, 0.0, 0.0, 5.0
@@ -43,6 +43,14 @@ alg = Algorithms(model)
 p0 = convert_to_xy([0.0, 25.0, 90.0, 7.0])
 res = alg.mle_v2(p0)
 alg.print_result(res)
+
+swarm = Swarm(model, True)
+swarm.set_algorithm("ММП")
+swarm.set_target(target)
+swarm.set_initial()
+swarm.set_noise_func()
+
+r = swarm.run()
 
 print(observer)
 print(target)

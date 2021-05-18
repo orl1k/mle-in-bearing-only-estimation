@@ -1,5 +1,5 @@
 import numpy as np
-from tma.object import Target
+from tma.objects import Target
 from tma.helper_functions import dist_func, to_bearing
 
 
@@ -26,7 +26,7 @@ class Model:
         else:
             self.end_t = end_t
         if target is None:
-            self.new_target(seed=seed)
+            self.new_target()
         else:
             if len(target.coords[0]) != len(observer.coords[0]):
                 raise ValueError(
@@ -36,7 +36,7 @@ class Model:
             self.target = target
             self.set_data()
             self.set_bearings()
-            self.set_noise(seed=seed)
+        self.set_noise(seed=seed)
         if verbose:
             self.verbose = verbose
             print(
@@ -46,16 +46,13 @@ class Model:
                 + f"end_time = {self.end_t}"
             )
 
-    def new_target(self, p0=None, seed=None):
-
-        b, d, c, v = self.get_random_p0(seed=seed) if p0 is None else p0
-
+    def new_target(self, p0=None):
+        b, d, c, v = [5.0, 20.0, 45.0, 10.0] if p0 is None else p0
         target = Target(self.observer, b, d, c, v)
         target.forward_movement(len(self.observer_coords[0]) - 1)
         self.target = target
         self.set_data()
         self.set_bearings()
-        self.set_noise(seed=seed)
 
     def set_noise(self, seed=None):
         rng = np.random.RandomState(seed)
@@ -89,12 +86,3 @@ class Model:
             ),
         }
         return data
-
-    @staticmethod
-    def get_random_p0(seed=None):
-        rng = np.random.RandomState(seed)
-        b = 0
-        d = rng.uniform(5, 50)
-        c = rng.uniform(0, 180)
-        v = rng.uniform(5, 15)
-        return [b, d, c, v]

@@ -1,7 +1,8 @@
 import numpy as np
+import pandas as pd
 import tma.helper_functions as f
 from tma.lm import lev_mar
-from functools import wraps
+from functools import wraps, partial
 from time import perf_counter
 from collections import namedtuple
 from scipy.optimize import curve_fit
@@ -37,12 +38,6 @@ class Algorithms:
             (1 / 1, 1 / 0.15, 1 / 10, 1 / 0.15),
             (1 / 1, 1 / 0.2, 1 / 15, 1 / 0.2),
         )
-        self.alg_dict = {
-            "ММП2": self.mle_v1,
-            "ММП": self.mle_v2,
-            "N пеленгов": self.n_bearings,
-            "ДММП": self.dynamic_mle,
-        }
 
     @full_output
     @timing
@@ -149,51 +144,6 @@ class Algorithms:
             lam = res[3] * 4
         return res_arr
 
-    def swarm(
-        self,
-        algorithm_name="ММП",
-        n=100,
-        seeded=True,
-        fixed_target=False,
-        fixed_noise=False,
-        p0_func=None,
-        target_func=None,
-        p0=None,
-        verbose=False,
-    ):
-        res_arr = []
-
-        if fixed_target:
-            target_f = lambda x: None
-        else:
-            target_func = (
-                target_func
-                if target_func is not None
-                else self.model.get_random_p0
-            )
-            target_f = lambda x: self.model.new_target(p0=target_func(seed=x))
-
-        if p0 is not None:
-            p0_f = lambda x: p0
-        else:
-            if seeded:
-                p0_f = lambda x: self.model.get_random_p0(seed=x + 100000)
-            else:
-                p0_f = self.model.get_random_p0
-
-        noise_f = lambda x: self.model.set_noise(seed=x)
-
-        algorithm = self.alg_dict[algorithm_name]
-        iterator = range(n) if seeded else [None] * n
-
-        for i in iterator:
-            target_f(i)
-            noise_f(i)
-            result = algorithm(f.convert_to_xy(p0_f(i)))
-            res_arr.append(result)
-
-        return res_arr
-
     def _get_result(self, algorithm_name, t, res, *args):
 
         try:
@@ -288,6 +238,80 @@ class Algorithms:
         return abs(temp) * delta
 
     @staticmethod
+    def get_df(result):
+        mapper = {
+            "b0": "П0_ист",
+            "d0": "Д0_ист",
+            "c0": "К0_ист",
+            "v0": "V0_ист",
+            "res_b0": "П0_расч",
+            "res_d0": "Д0_расч",
+            "res_c0": "К0_расч",
+            "res_v0": "V0_расч",
+            "init_b0": "П0_апр",
+            "init_d0": "Д0_апр",
+            "init_c0": "К0_апр",
+            "init_v0": "V0_апр",
+            "cur_b0": "Птек_ист",
+            "cur_d0": "Дтек_ист",
+            "cur_res_b0": "Птек_расч",
+            "cur_res_d0": "Дтек_расч",
+            "std_x": "СКО X",
+            "std_y": "СКО Y",
+            "std_vx": "СКО VX",
+            "std_vy": "СКО VY",
+            "ka": "Ка",
+            "kb": "Кб",
+            "kc": "Успех",
+            "t": "Время",
+            "nf": "Вычисления",
+            "iter": "Итерации",
+        }
+
+        if isinstance(result, list):
+            result_list = map(Algorithms.parser, result)
+        else:
+            result_list = map(Algorithms.parser, [result])
+
+        return pd.DataFrame(result_list).rename(columns=mapper)
+
+    @staticmethod
+    def parser(result):
+        parsed_res = namedtuple(
+            "res",
+            [
+                "b0",
+                "d0",
+                "c0",
+                "v0",
+                "res_b0",
+                "res_d0",
+                "res_c0",
+                "res_v0",
+                "init_b0",
+                "init_d0",
+                "init_c0",
+                "init_v0",
+                "cur_b0",
+                "cur_d0",
+                "cur_res_b0",
+                "cur_res_d0",
+                "std_x",
+                "std_y",
+                "std_vx",
+                "std_vy",
+                "ka",
+                "kb",
+                "kc",
+                "t",
+                "nf",
+                "iter",
+            ],
+        )
+
+        return parsed_res(*(i for sublist in result for i in sublist))
+
+    @staticmethod
     def handle_cov_perr(cov):
         diag = np.diag(cov)
         if (diag < 0).any():
@@ -309,3 +333,69 @@ class Algorithms:
             for key, value in d.items():
                 print(key + ":", value)
         print("-" * 79)
+
+
+class Swarm(Algorithms):
+    def __init__(self, model, seeded=True):
+        super().__init__(model)
+        self._model = model
+        self._seeded = seeded
+        self._target = None
+        self._alg_dict = {
+            "ММП2": super().mle_v1,
+            "ММП": super().mle_v2,
+            "N пеленгов": super().n_bearings,
+            "ДММП": super().dynamic_mle,
+        }
+
+    def set_target(self, target):
+        self._target = target
+
+    def set_target_func(self, target_func):
+        self._target_func = target_func
+
+    def set_algorithm(self, algorithm="ММП"):
+        self._algorithm = self._alg_dict[algorithm]
+
+    def set_initial(self, initial=None):
+        if initial is None:
+            self._get_initial = lambda x: [0.0, 25.0, 90.0, 7.0]
+        else:
+            self._get_initial = lambda x: initial
+
+    def set_initial_func(self, initial_func):
+        self._get_initial = (
+            initial_func if self._seeded else lambda x: initial_func(seed=x)
+        )
+
+    def set_noise_func(self):
+        self._update_noise = lambda x: self.model.set_noise(seed=x)
+
+    def create_swarm(self):
+        self.set_noise_func()
+        if self._target is None:
+            self._update_target = lambda x: self._model.new_target(
+                p0=self._target_func(seed=x)
+            )
+        else:
+            self._update_target = lambda x: None
+
+    def run(self, n=100):
+        self.create_swarm()
+        res_arr = []
+
+        algorithm = self._algorithm
+        iterator = range(n) if self._seeded else (None for _ in range(n))
+        initial_func = self._get_initial
+        update_target = self._update_target
+        update_noise = self._update_noise
+        convert_initial = f.convert_to_xy
+
+        for i in iterator:
+            update_target(i)
+            update_noise(i)
+            initial = convert_initial(initial_func(i))
+            result = algorithm(initial)
+            res_arr.append(result)
+
+        return res_arr

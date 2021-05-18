@@ -109,80 +109,13 @@ def convert_to_xy(params):
     return np.array((x, y, vx, vy))
 
 
-def get_df(result):
-
-    mapper = {
-        "b0": "П0_ист",
-        "d0": "Д0_ист",
-        "c0": "К0_ист",
-        "v0": "V0_ист",
-        "res_b0": "П0_расч",
-        "res_d0": "Д0_расч",
-        "res_c0": "К0_расч",
-        "res_v0": "V0_расч",
-        "init_b0": "П0_апр",
-        "init_d0": "Д0_апр",
-        "init_c0": "К0_апр",
-        "init_v0": "V0_апр",
-        "cur_b0": "Птек_ист",
-        "cur_d0": "Дтек_ист",
-        "cur_res_b0": "Птек_расч",
-        "cur_res_d0": "Дтек_расч",
-        "std_x": "СКО X",
-        "std_y": "СКО Y",
-        "std_vx": "СКО VX",
-        "std_vy": "СКО VY",
-        "ka": "Ка",
-        "kb": "Кб",
-        "kc": "Успех",
-        "t": "Время",
-        "nf": "Вычисления",
-        "iter": "Итерации",
-    }
-
-    if isinstance(result, list):
-        result_list = map(parser, result)
-    else:
-        result_list = map(parser, [result])
-
-    return pd.DataFrame(result_list).rename(columns=mapper)
-
-
-def parser(result):
-    parsed_res = namedtuple(
-        "res",
-        [
-            "b0",
-            "d0",
-            "c0",
-            "v0",
-            "res_b0",
-            "res_d0",
-            "res_c0",
-            "res_v0",
-            "init_b0",
-            "init_d0",
-            "init_c0",
-            "init_v0",
-            "cur_b0",
-            "cur_d0",
-            "cur_res_b0",
-            "cur_res_d0",
-            "std_x",
-            "std_y",
-            "std_vx",
-            "std_vy",
-            "ka",
-            "kb",
-            "kc",
-            "t",
-            "nf",
-            "iter",
-        ],
-    )
-
-    return parsed_res(*(i for sublist in result for i in sublist))
-
+def get_random_p0(seed=None):
+    rng = np.random.RandomState(seed)
+    b = 0
+    d = rng.uniform(5, 50)
+    c = rng.uniform(0, 180)
+    v = rng.uniform(5, 15)
+    return [b, d, c, v]
 
 def df_to_docx(df, path):
 
